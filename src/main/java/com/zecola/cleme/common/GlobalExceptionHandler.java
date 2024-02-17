@@ -28,6 +28,6 @@ public class GlobalExceptionHandler {
             //可以直接返回用户已存在
             return R.error(mag);
         }
-        return R.error("未知错误，请联系服务商");
+        return R.error("未知错误，请 联系服务商");
     }
 }
