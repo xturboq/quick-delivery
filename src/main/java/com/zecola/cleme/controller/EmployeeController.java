@@ -1,16 +1,15 @@
 package com.zecola.cleme.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zecola.cleme.common.R;
 import com.zecola.cleme.pojo.Employee;
 import com.zecola.cleme.service.EmployeeService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.DigestUtils;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
@@ -86,5 +85,39 @@ public class EmployeeController {
         return R.success("新增员工成功");
     }
 
+    @GetMapping("/page")
+    public R<Page> page(int page,int pageSize,String name){
+        log.info("page:"+page+" pageSize:"+pageSize+" name:"+name);
+        //构造分页构造器
+        Page pageinfo = new Page(page,pageSize);
+        //构造条件构造器
+        LambdaQueryWrapper<Employee> queryWrapper = new LambdaQueryWrapper();
+        //添加过滤条件
+        queryWrapper.like(StringUtils.isNotEmpty(name),Employee::getUsername,name);
+        //添加排序条件
+        queryWrapper.orderByDesc(Employee::getUpdateTime);
+        //执行查询
+        employeeService.page(pageinfo,queryWrapper);
+
+        return R.success(pageinfo);
+    }
+
+    /**
+     * 根据ID修改员工信息
+     * @param employee
+     * @return
+     */
+    @PutMapping
+    public  R<String>update(HttpServletRequest httpServletRequest,@RequestBody Employee employee){
+        log.info(employee.toString());
+        Long empId = (Long) httpServletRequest.getSession().getAttribute("employee");
+
+        employee.setUpdateTime(LocalDateTime.now());
+        employee.setUpdateUser(empId);
+
+        employeeService.updateById(employee);
+
+        return R.success("员工信息修改成功");
+    }
 
 }
