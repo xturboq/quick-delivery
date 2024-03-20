@@ -3,14 +3,11 @@ package com.zecola.cleme.common;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.ControllerAdvice;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.sql.SQLIntegrityConstraintViolationException;
 
-@ControllerAdvice(annotations = {RestController.class, Controller.class})
+@RestControllerAdvice(annotations = {RestController.class, Controller.class})
 @ResponseBody
 @Slf4j
 public class GlobalExceptionHandler {
@@ -28,6 +25,6 @@ public class GlobalExceptionHandler {
             //可以直接返回用户已存在
             return R.error(mag);
         }
-        return R.error("未知错误，请 联系服务商");
+        return R.error("未知错误，请联系服务商");
     }
 }

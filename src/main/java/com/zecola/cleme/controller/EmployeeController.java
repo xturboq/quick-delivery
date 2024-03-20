@@ -2,6 +2,7 @@ package com.zecola.cleme.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.zecola.cleme.common.BaseContext;
 import com.zecola.cleme.common.R;
 import com.zecola.cleme.pojo.Employee;
 import com.zecola.cleme.service.EmployeeService;
@@ -64,21 +65,29 @@ public class EmployeeController {
     public R<String>logout(HttpServletRequest request){
         request.getSession().removeAttribute("employee");
         return R.success("用户退出成功");
-
     }
+
+
+    /**
+     * 员工新增
+     * @param request
+     * @param employee
+     * @return
+     */
     @PostMapping
     public R<String> save(HttpServletRequest request ,@RequestBody Employee employee){
         log.info(employee.toString());
         //设置初始密码123456，需要进行md5加密处理
         employee.setPassword(DigestUtils.md5DigestAsHex("123456".getBytes()));
-        employee.setCreateTime(LocalDateTime.now());
-        employee.setUpdateTime(LocalDateTime.now());
+        //employee.setCreateTime(LocalDateTime.now());
+        //employee.setUpdateTime(LocalDateTime.now());
 
         //获取当前登录用户的ID
         Long empId = (Long) request.getSession().getAttribute("employee");
+        BaseContext.setCurrentId(empId);
 
-        employee.setCreateUser(empId);
-        employee.setUpdateUser(empId);
+        //employee.setCreateUser(empId);
+        //employee.setUpdateUser(empId);
 
         employeeService.save(employee);
 
@@ -134,4 +143,8 @@ public class EmployeeController {
             return R.success(employee);
         }return  R.error("没有查到对应员工信息");
     }
+
+
+
+
 }
