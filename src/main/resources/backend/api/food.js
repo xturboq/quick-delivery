@@ -66,7 +66,7 @@ const commonDownload = (params) => {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
     },
-    url: '/common/download',
+    //url: '/common/download',
     method: 'get',
     params
   })
