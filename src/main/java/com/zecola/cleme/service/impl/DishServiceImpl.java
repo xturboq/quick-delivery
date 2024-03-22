@@ -2,12 +2,16 @@ package com.zecola.cleme.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.zecola.cleme.common.R;
 import com.zecola.cleme.dto.DishDto;
 import com.zecola.cleme.mapper.DishMapper;
 import com.zecola.cleme.pojo.Dish;
 import com.zecola.cleme.pojo.DishFlavor;
+import com.zecola.cleme.pojo.Setmeal;
+import com.zecola.cleme.pojo.SetmealDish;
 import com.zecola.cleme.service.DishFlavorService;
 import com.zecola.cleme.service.DishService;
+import com.zecola.cleme.service.SetmealDishService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +26,10 @@ import java.util.stream.Collectors;
 public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements DishService {
     @Autowired
     private DishFlavorService dishFlavorService;
+
+    @Autowired
+    private SetmealDishService setmealDishService;
+
     @Override
     @Transactional
     public void saveWithFlavor(DishDto dishDto) {
@@ -63,6 +71,7 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
     }
 
     @Override
+    @Transactional
     public void updateWithFlavor(DishDto dishDto) {
         //更新dish表基本信息
         this.updateById(dishDto);
@@ -80,5 +89,40 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
         }).collect(Collectors.toList());
 
         dishFlavorService.saveBatch(flavors);
+    }
+
+
+
+    /**
+     * 删除菜品，同时需要删除菜品和对应的口味的关联数据
+     * @param ids
+     */
+    @Transactional
+    @Override
+    public void removeWithFlavor(List<Long> ids) {
+        //查询菜品状态，是否可以删除
+        LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.in(Dish::getId,ids);
+        queryWrapper.eq(Dish::getStatus,1);
+
+        if (this.list(queryWrapper).size() > 0){
+            throw new RuntimeException("菜品正在售卖中，不能删除");
+        }
+        //查询菜品是否包含在套餐中，是否可以删除
+        LambdaQueryWrapper<SetmealDish>setmealqueryWrapper = new LambdaQueryWrapper<>();
+        setmealqueryWrapper.in(SetmealDish::getDishId,ids);
+        SetmealDish setmealDish = setmealDishService.getOne(setmealqueryWrapper);
+
+        if (setmealDish != null){
+            throw new RuntimeException("菜品包含在套餐中，不能删除");
+        }
+        //删除菜品信息
+        super.removeByIds(ids);
+
+        //删除菜品口味信息
+        LambdaQueryWrapper<DishFlavor> lambdaQueryWrapper = new LambdaQueryWrapper<>();
+        lambdaQueryWrapper.in(DishFlavor::getDishId,ids);
+        dishFlavorService.remove(lambdaQueryWrapper);
+
     }
 }

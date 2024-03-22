@@ -1,22 +1,21 @@
 package com.zecola.cleme.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.conditions.update.LambdaUpdateChainWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zecola.cleme.common.R;
 import com.zecola.cleme.dto.DishDto;
-import com.zecola.cleme.pojo.Category;
-import com.zecola.cleme.pojo.Dish;
-import com.zecola.cleme.pojo.DishFlavor;
-import com.zecola.cleme.pojo.Employee;
-import com.zecola.cleme.service.CategoryService;
-import com.zecola.cleme.service.DishFlavorService;
-import com.zecola.cleme.service.DishService;
+import com.zecola.cleme.pojo.*;
+import com.zecola.cleme.service.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.lang.reflect.Array;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -119,5 +118,35 @@ public class DishController {
         dishService.updateWithFlavor(dishDto);
         return R.success("新增菜品成功");
 
+    }
+
+    /**
+     * (批量)删除菜品及其口味
+     * @param ids
+     * @return
+     */
+    @DeleteMapping
+    public R<String> delete(@RequestParam List<Long>ids) {
+        log.info("删除菜品，ids:{}", ids);
+        dishService.removeWithFlavor(ids);
+        return R.success("删除菜品成功");
+
+    }
+
+    /**
+     * (批量)停售菜品信息
+     * @param ids
+     * @param status
+     * @return
+     */
+    @PostMapping("/status/{status}")
+    public R<String> updateMulStatus(@PathVariable Integer status, Long[] ids) {
+        List<Long>list = Arrays.asList(ids);
+        log.info("需要修改菜品状态，ids:{}", list);
+        //设置条件构造器
+        LambdaUpdateWrapper<Dish> updatequeryWrapper = new LambdaUpdateWrapper<>();
+        updatequeryWrapper.set(Dish::getStatus, status).in(Dish::getId, list);
+        dishService.update(updatequeryWrapper);
+        return R.success("修改菜品状态成功");
     }
 }
