@@ -111,9 +111,9 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
         //查询菜品是否包含在套餐中，是否可以删除
         LambdaQueryWrapper<SetmealDish>setmealqueryWrapper = new LambdaQueryWrapper<>();
         setmealqueryWrapper.in(SetmealDish::getDishId,ids);
-        SetmealDish setmealDish = setmealDishService.getOne(setmealqueryWrapper);
+        int count = setmealDishService.count(setmealqueryWrapper);
 
-        if (setmealDish != null){
+        if (count != 0){
             throw new RuntimeException("菜品包含在套餐中，不能删除");
         }
         //删除菜品信息

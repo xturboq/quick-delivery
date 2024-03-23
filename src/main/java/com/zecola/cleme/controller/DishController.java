@@ -149,4 +149,26 @@ public class DishController {
         dishService.update(updatequeryWrapper);
         return R.success("修改菜品状态成功");
     }
+
+    /**
+     * 获取菜品数据
+     *
+     * @param dish 用于查询条件的菜品实体，其中categoryId和status可选作为查询条件
+     * @return 返回查询到的菜品列表的结果，成功返回包含列表的Result对象
+     */
+    @GetMapping("/list")
+    public R<List<Dish>> get(Dish dish) {
+        // 创建条件查询器
+        LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
+        // 根据传进来的categoryId查询，如果categoryId不为空
+        queryWrapper.eq(dish.getCategoryId() != null, Dish::getCategoryId, dish.getCategoryId());
+        // 只查询状态为1的菜品（启售菜品）
+        queryWrapper.eq(Dish::getStatus, 1);
+        // 对查询结果进行排序，首先按排序字段升序，然后按更新时间降序
+        queryWrapper.orderByAsc(Dish::getSort).orderByDesc(Dish::getUpdateTime);
+        // 执行查询并获取结果
+        List<Dish> list = dishService.list(queryWrapper);
+        // 将查询结果封装成成功结果并返回
+        return R.success(list);
+    }
 }
