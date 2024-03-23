@@ -1,5 +1,6 @@
 package com.zecola.cleme.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.zecola.cleme.common.R;
 import com.zecola.cleme.pojo.User;
 import com.zecola.cleme.service.UserService;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.mail.MessagingException;
 import javax.servlet.http.HttpSession;
+import java.util.Map;
 
 @RestController
 @Slf4j
@@ -28,6 +30,7 @@ public class UserController {
 
     /**
      * 发送验证码
+     *
      * @param user
      * @param session
      * @return
@@ -48,5 +51,35 @@ public class UserController {
             return R.success("验证码发送成功");
         }
         return R.error("验证码发送失败");
+    }
+
+    @PostMapping("/login")
+    public R<User> login(@RequestBody Map map, HttpSession session) {
+        log.info(map.toString());
+        String phone = (String) map.get("phone");
+        String code = (String) map.get("code");
+        String codeInSession = (String) session.getAttribute(phone);
+
+        //比较用户输入的密码和session中存的验证码是否一致
+        if (code != null && code.equals(codeInSession)) {
+            //如果验证码正确，判断用户是否已经存在
+            LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(User::getPhone, phone);
+            User user = userService.getOne(queryWrapper);
+
+            //如果用户不存在，就创建一个用户
+            if (user == null) {
+                user = new User();
+                user.setPhone(phone);
+                userService.save(user);
+                user.setName("用户" + codeInSession);
+            }
+            //存个session，表示登录状态
+            session.setAttribute("user", user.getId());
+            //并将其作为结果返回
+            return R.success(user);
+        }
+
+        return R.error("验证码错误,登录失败！");
     }
 }
