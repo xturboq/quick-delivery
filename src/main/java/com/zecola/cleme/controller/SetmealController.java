@@ -11,6 +11,7 @@ import com.zecola.cleme.pojo.Category;
 import com.zecola.cleme.pojo.Dish;
 import com.zecola.cleme.pojo.Setmeal;
 import com.zecola.cleme.service.CategoryService;
+import com.zecola.cleme.service.DishService;
 import com.zecola.cleme.service.SetmealDishService;
 import com.zecola.cleme.service.SetmealService;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +36,9 @@ public class SetmealController {
 
     @Autowired
     private CategoryService categoryService;
+
+    @Autowired
+    private DishService dishService;
 
     /**
      * 新增套餐
@@ -97,33 +101,69 @@ public class SetmealController {
 
     /**
      * (批量)删除套餐信息
+     *
      * @param ids
      * @return
      */
 
     @DeleteMapping
-    public R<String> delete(@RequestParam List<Long>ids)
-    {
-        log.info("要删除的套餐id为:",ids);
+    public R<String> delete(@RequestParam List<Long> ids) {
+        log.info("要删除的套餐id为:", ids);
         setmealService.removeWithDish(ids);
         return R.success("套餐删除成功");
     }
 
     /**
+     * 查询套餐列表
+     *
+     * @param setmeal 包含查询条件的套餐对象，可以为空。如果非空，将根据其中的categoryId和status进行查询过滤。
+     * @return 返回套餐列表的响应对象，其中包含查询到的套餐列表。
+     */
+    @GetMapping("/list")
+    public R<List<Setmeal>> list(Setmeal setmeal) {
+        // 使用LambdaQueryWrapper构造查询条件
+        LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
+        // 根据传入的setmeal对象的categoryId和status添加查询条件，如果字段非null
+        queryWrapper.eq(setmeal.getCategoryId() != null, Setmeal::getCategoryId, setmeal.getCategoryId());
+        queryWrapper.eq(setmeal.getStatus() != null, Setmeal::getStatus, 1);
+        // 按更新时间降序排序
+        queryWrapper.orderByDesc(Setmeal::getUpdateTime);
+        // 执行查询并返回结果
+        List<Setmeal> setmealList = setmealService.list(queryWrapper);
+        return R.success(setmealList);
+    }
+
+    /**
      * (批量)修改菜品售卖状态
+     *
      * @param status
      * @param ids
      * @return
      */
     @PostMapping("/status/{status}")
     public R<String> updateMulStatus(@PathVariable Integer status, Long[] ids) {
-        List<Long>list = Arrays.asList(ids);
+        List<Long> list = Arrays.asList(ids);
         log.info("需要修改套餐状态，ids:{}", list);
         //设置条件构造器
         LambdaUpdateWrapper<Setmeal> updatequeryWrapper = new LambdaUpdateWrapper<>();
-        updatequeryWrapper.set(Setmeal::getStatus,status).in(Setmeal::getId, list);
+        updatequeryWrapper.set(Setmeal::getStatus, status).in(Setmeal::getId, list);
         setmealService.update(updatequeryWrapper);
         return R.success("修改菜品状态成功");
     }
 
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
