@@ -2,6 +2,7 @@ package com.zecola.cleme.controller;
 
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zecola.cleme.common.R;
 import com.zecola.cleme.dto.DishDto;
@@ -17,6 +18,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -105,6 +107,23 @@ public class SetmealController {
         log.info("要删除的套餐id为:",ids);
         setmealService.removeWithDish(ids);
         return R.success("套餐删除成功");
+    }
+
+    /**
+     * (批量)修改菜品售卖状态
+     * @param status
+     * @param ids
+     * @return
+     */
+    @PostMapping("/status/{status}")
+    public R<String> updateMulStatus(@PathVariable Integer status, Long[] ids) {
+        List<Long>list = Arrays.asList(ids);
+        log.info("需要修改套餐状态，ids:{}", list);
+        //设置条件构造器
+        LambdaUpdateWrapper<Setmeal> updatequeryWrapper = new LambdaUpdateWrapper<>();
+        updatequeryWrapper.set(Setmeal::getStatus,status).in(Setmeal::getId, list);
+        setmealService.update(updatequeryWrapper);
+        return R.success("修改菜品状态成功");
     }
 
 }
