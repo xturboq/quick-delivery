@@ -58,7 +58,9 @@ public class UserController {
         log.info(map.toString());
         String phone = (String) map.get("phone");
         String code = (String) map.get("code");
-        String codeInSession = (String) session.getAttribute(phone);
+        //String codeInSession = (String) session.getAttribute(phone);
+        //这里暂时用12345实现，验证码逻辑已经跑通
+        String codeInSession = "12345";
 
         //比较用户输入的密码和session中存的验证码是否一致
         if (code != null && code.equals(codeInSession)) {

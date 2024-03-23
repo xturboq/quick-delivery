@@ -1,6 +1,7 @@
 package com.zecola.cleme.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.zecola.cleme.common.BaseContext;
 import com.zecola.cleme.common.R;
 import com.zecola.cleme.pojo.AddressBook;
@@ -13,7 +14,7 @@ import java.util.List;
 
 @RestController
 @Slf4j
-@RequestMapping("/addreddBook")
+@RequestMapping("/addressBook")
 public class AddressBookController {
 
     @Autowired
@@ -58,6 +59,28 @@ public class AddressBookController {
         // 保存地址信息到数据库
         addressBookService.save(addressBook);
         // 返回添加成功的状态及地址信息
+        return R.success(addressBook);
+    }
+
+
+    /**
+     * 设置默认地址
+     *
+     * @param addressBook 用户地址信息
+     * @return 返回更新后的地址信息
+     */
+    @PutMapping("/default")
+    public R<AddressBook> setDefaultAddress(@RequestBody AddressBook addressBook) {
+        // 设置当前用户id
+        addressBook.setUserId(BaseContext.getCurrentId());
+        // 使用条件构造器更新用户的所有地址的is_default为0
+        LambdaUpdateWrapper<AddressBook> queryWrapper = new LambdaUpdateWrapper<>();
+        queryWrapper.eq(addressBook.getUserId() != null, AddressBook::getUserId, addressBook.getUserId());
+        queryWrapper.set(AddressBook::getIsDefault, 0);
+        addressBookService.update(queryWrapper);
+        // 将当前地址的is_default设置为1
+        addressBook.setIsDefault(1);
+        addressBookService.updateById(addressBook);
         return R.success(addressBook);
     }
 }
