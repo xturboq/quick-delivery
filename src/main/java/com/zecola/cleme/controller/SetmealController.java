@@ -10,6 +10,7 @@ import com.zecola.cleme.dto.SetmealDto;
 import com.zecola.cleme.pojo.Category;
 import com.zecola.cleme.pojo.Dish;
 import com.zecola.cleme.pojo.Setmeal;
+import com.zecola.cleme.pojo.SetmealDish;
 import com.zecola.cleme.service.CategoryService;
 import com.zecola.cleme.service.DishService;
 import com.zecola.cleme.service.SetmealDishService;
@@ -149,6 +150,38 @@ public class SetmealController {
         updatequeryWrapper.set(Setmeal::getStatus, status).in(Setmeal::getId, list);
         setmealService.update(updatequeryWrapper);
         return R.success("修改菜品状态成功");
+    }
+
+    /**
+     * 根据套餐ID展示套餐内的菜品信息。
+     *
+     * @param id 套餐的ID，用于查询套餐内的菜品信息。
+     * @return 返回一个包含套餐内菜品信息的列表。每个菜品信息包括基本属性和图片等详细信息。
+     */
+    @GetMapping("/dish/{id}")
+    public R<List<DishDto>> showSetmealDish(@PathVariable Long id) {
+        // 使用条件构造器查询特定套餐下的菜品信息
+        LambdaQueryWrapper<SetmealDish> dishLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        dishLambdaQueryWrapper.eq(SetmealDish::getSetmealId, id);
+
+        // 查询数据库获取满足条件的菜品记录
+        List<SetmealDish> records = setmealDishService.list(dishLambdaQueryWrapper);
+
+        // 遍历查询结果，转换为 DTO 格式，并查询每个菜品的详细信息
+        List<DishDto> dtoList = records.stream().map((item) -> {
+            DishDto dishDto = new DishDto();
+            // 复制菜品基本信息
+            BeanUtils.copyProperties(item,dishDto);
+            // 根据菜品ID查询菜品详细信息
+            Long dishId = item.getDishId();
+            Dish dish = dishService.getById(dishId);
+            // 复制菜品的详细信息，包括图片等
+            BeanUtils.copyProperties(dish,dishDto);
+            return dishDto;
+        }).collect(Collectors.toList());
+
+        // 返回查询结果，包装成成功响应
+        return R.success(dtoList);
     }
 
 
