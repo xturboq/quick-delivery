@@ -1,6 +1,8 @@
 package com.zecola.cleme.controller;
 
+import com.alibaba.druid.util.StringUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zecola.cleme.common.BaseContext;
 import com.zecola.cleme.common.R;
@@ -100,30 +102,95 @@ public class OrderController {
         return R.success(ordersDtoPage);
     }
 
+    /**
+     * 处理再次下单的请求。
+     * 将已下单的商品详情信息复制到购物车中。
+     *
+     * @param map 包含订单ID的Map对象，其中"id"键对应的值为订单ID。
+     * @return 返回一个包含成功消息的R<String>对象。
+     */
     @PostMapping("/again")
     public R<String> again(@RequestBody Map<String,String> map){
-        //获取order_id
+        // 从请求体中获取订单ID
         Long orderId = Long.valueOf(map.get("id"));
-        //条件构造器
+        // 使用条件构造器查询订单详情
         LambdaQueryWrapper<OrderDetail> queryWrapper = new LambdaQueryWrapper<>();
-        //查询订单的口味细节数据
         queryWrapper.eq(OrderDetail::getOrderId,orderId);
         List<OrderDetail> details = orderDetailService.list(queryWrapper);
-        //获取用户id，待会需要set操作
+        // 获取当前用户ID，为购物车项设置用户关联
         Long userId = BaseContext.getCurrentId();
+        // 将订单详情转换为购物车项，并批量保存到购物车中
         List<ShoppingCart> shoppingCarts = details.stream().map((item) ->{
             ShoppingCart shoppingCart = new ShoppingCart();
-            //Copy对应属性值
+            // 复制订单详情属性到购物车项
             BeanUtils.copyProperties(item,shoppingCart);
-            //设置一下userId
+            // 为购物车项设置用户ID和创建时间
             shoppingCart.setUserId(userId);
-            //设置一下创建时间为当前时间
             shoppingCart.setCreateTime(LocalDateTime.now());
             return shoppingCart;
         }).collect(Collectors.toList());
-        //加入购物车
         shoppingCartService.saveBatch(shoppingCarts);
-        return R.success("喜欢吃就再来一单吖~");
+        // 执行成功，返回成功消息
+        return R.success("再来一单操作成功");
+    }
+
+    @GetMapping("/page")
+    public R<Page> page(int page, int pageSize, Long number, String beginTime, String endTime) {
+        //获取当前id
+        Page<Orders> pageInfo = new Page<>(page, pageSize);
+        Page<OrdersDto> ordersDtoPage = new Page<>(page, pageSize);
+        //条件构造器
+        LambdaQueryWrapper<Orders> queryWrapper = new LambdaQueryWrapper<>();
+        //按时间降序排序
+        queryWrapper.orderByDesc(Orders::getOrderTime);
+        //订单号
+        queryWrapper.eq(number != null, Orders::getId, number);
+        //时间段，大于开始，小于结束
+        queryWrapper.gt(!StringUtils.isEmpty(beginTime), Orders::getOrderTime, beginTime)
+                .lt(!StringUtils.isEmpty(endTime), Orders::getOrderTime, endTime);
+        orderService.page(pageInfo, queryWrapper);
+        List<OrdersDto> list = pageInfo.getRecords().stream().map((item) -> {
+            OrdersDto ordersDto = new OrdersDto();
+            //获取orderId,然后根据这个id，去orderDetail表中查数据
+            Long orderId = item.getId();
+            LambdaQueryWrapper<OrderDetail> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(OrderDetail::getOrderId, orderId);
+            List<OrderDetail> details = orderDetailService.list(wrapper);
+            BeanUtils.copyProperties(item, ordersDto);
+            //之后set一下属性
+            ordersDto.setOrderDetails(details);
+            return ordersDto;
+        }).collect(Collectors.toList());
+        BeanUtils.copyProperties(pageInfo, ordersDtoPage, "records");
+        ordersDtoPage.setRecords(list);
+
+        return R.success(ordersDtoPage);
+    }
+
+    /**
+     * 修改订单状态
+     *
+     * @param map 包含订单状态和订单ID的键值对，其中"status"对应订单状态，"id"对应订单ID
+     * @return 返回一个结果对象，包含订单状态修改是否成功的信息
+     */
+    @PutMapping
+    public R<String> changeStatus(@RequestBody Map<String, String> map) {
+        // 从请求体中获取订单状态和ID
+        int status = Integer.parseInt(map.get("status"));
+        Long orderId = Long.valueOf(map.get("id"));
+        // 记录修改订单状态的日志
+        log.info("修改订单状态:status={status},id={id}", status, orderId);
+
+        // 构建更新条件，设置订单状态
+        LambdaUpdateWrapper<Orders> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(Orders::getId, orderId);
+        updateWrapper.set(Orders::getStatus, status);
+
+        // 执行订单状态更新操作
+        orderService.update(updateWrapper);
+
+        // 返回状态修改成功的消息
+        return R.success("订单状态修改成功");
     }
 
 }

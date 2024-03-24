@@ -55,6 +55,67 @@ public class SetmealController {
     }
 
     /**
+     * 根据ID获取套餐详情
+     *
+     * @param id 套餐的ID，不能为空
+     * @return 返回套餐的详细信息，包括套餐本身和套餐包含的菜品列表
+     */
+    @GetMapping("/{id}")
+    public R<SetmealDto> getById(@PathVariable Long id) {
+        // 通过ID从数据库中获取套餐信息
+        Setmeal setmeal = setmealService.getById(id);
+        SetmealDto setmealDto = new SetmealDto();
+        // 使用BeanUtils工具类将Setmeal对象的属性值复制到SetmealDto对象中
+        BeanUtils.copyProperties(setmeal, setmealDto);
+
+        // 构建查询条件，查询与该套餐ID匹配的所有套餐菜品
+        LambdaQueryWrapper<SetmealDish> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(SetmealDish::getSetmealId, id);
+        // 根据查询条件获取套餐菜品列表
+        List<SetmealDish> setmealDishes = setmealDishService.list(queryWrapper);
+
+        // 将查询到的套餐菜品列表设置到SetmealDto对象中
+        setmealDto.setSetmealDishes(setmealDishes);
+
+        // 返回操作结果，包含处理成功的SetmealDto对象
+        return R.success(setmealDto);
+    }
+
+    /**
+     * 更新套餐信息及其包含的菜品。
+     *
+     * @param setmealDto 包含套餐更新信息和菜品信息的数据传输对象，其中：
+     *                   - setmealDto.getId() 表示要更新的套餐的ID；
+     *                   - setmealDto.getSetmealDishes() 包含了该套餐更新后的菜品列表。
+     * @return 返回操作结果，成功则返回更新后的套餐信息，包含在R<Setmeal>对象中。
+     */
+    @PutMapping
+    public R<Setmeal> updateWithDish(@RequestBody SetmealDto setmealDto) {
+        List<SetmealDish> setmealDishes = setmealDto.getSetmealDishes();
+        Long setmealId = setmealDto.getId();
+
+        // 删除当前套餐已有的菜品信息
+        LambdaQueryWrapper<SetmealDish> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(SetmealDish::getSetmealId, setmealId);
+        setmealDishService.remove(queryWrapper);
+
+        // 重新设置菜品信息并添加到套餐中
+        setmealDishes = setmealDishes.stream().map((item) ->{
+            item.setSetmealId(setmealId); // 设置套餐ID，因为菜品信息中可能不包含这个属性
+            return item;
+        }).collect(Collectors.toList());
+
+        // 更新套餐基本信息
+        setmealService.updateById(setmealDto);
+
+        // 批量保存更新后的套餐菜品信息
+        setmealDishService.saveBatch(setmealDishes);
+
+        return R.success(setmealDto);
+    }
+
+
+    /**
      * 套餐信息分页查询
      *
      * @param page
