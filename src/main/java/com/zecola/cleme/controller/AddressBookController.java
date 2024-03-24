@@ -83,4 +83,25 @@ public class AddressBookController {
         addressBookService.updateById(addressBook);
         return R.success(addressBook);
     }
+
+    /**
+     * 获取当前用户的默认地址
+     *
+     * @return R<AddressBook> 返回一个包含默认地址信息的响应对象，如果找不到默认地址，则返回空的响应对象。
+     */
+    @GetMapping("/default")
+    public R<AddressBook> defaultAddress() {
+        // 获取当前用户id
+        Long userId = BaseContext.getCurrentId();
+        // 条件构造器，用于查询当前用户且标记为默认的地址信息
+        LambdaQueryWrapper<AddressBook> queryWrapper = new LambdaQueryWrapper<>();
+        // 根据用户id进行查询条件设置，如果用户id存在
+        queryWrapper.eq(userId != null, AddressBook::getUserId, userId);
+        // 设置查询默认地址的条件
+        queryWrapper.eq(AddressBook::getIsDefault, 1);
+        // 从地址簿服务中根据条件查询一个地址信息，返回第一个匹配的结果
+        AddressBook addressBook = addressBookService.getOne(queryWrapper);
+        // 返回查询结果，如果存在则包含在成功的响应对象中，否则为空响应对象
+        return R.success(addressBook);
+    }
 }
