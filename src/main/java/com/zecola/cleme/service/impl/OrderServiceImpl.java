@@ -11,6 +11,7 @@ import com.zecola.cleme.pojo.*;
 import com.zecola.cleme.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -33,31 +34,45 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     @Autowired
     private OrderDetailService orderDetailService;
 
+    /**
+     * 提交订单
+     * @param orders 用户提交的订单信息
+     * 该方法主要完成以下功能：
+     * 1. 获取当前用户ID；
+     * 2. 根据用户ID查询其购物车数据；
+     * 3. 验证购物车数据是否为空；
+     * 4. 验证地址信息是否正确；
+     * 5. 生成订单和订单详情，并保存到数据库；
+     * 6. 清空购物车数据。
+     */
     @Override
+    @Transactional
     public void submit(Orders orders) {
-        //获取当前用户id
+        // 获取当前用户id
         Long userId = BaseContext.getCurrentId();
-        //条件构造器
+        // 条件构造器，用于查询用户的购物车数据
         LambdaQueryWrapper<ShoppingCart> shoppingCartLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        //根据当前用户id查询其购物车数据
+        // 根据当前用户id查询其购物车数据
         shoppingCartLambdaQueryWrapper.eq(userId != null, ShoppingCart::getUserId, userId);
         List<ShoppingCart> shoppingCarts = shoppingCartService.list(shoppingCartLambdaQueryWrapper);
-        //判断一下购物车是否为空
+        // 判断购物车数据是否为空
         if (shoppingCarts == null) {
             throw new CustomException("购物车数据为空，不能下单");
         }
-        //判断一下地址是否有误
+        // 判断地址信息是否有误
         Long addressBookId = orders.getAddressBookId();
         AddressBook addressBook = addressBookService.getById(addressBookId);
         if (addressBookId == null) {
             throw new CustomException("地址信息有误，不能下单");
         }
-        //获取用户信息，为了后面赋值
+        // 获取用户信息，用于订单信息的填充
         User user = userService.getById(userId);
+        // 生成订单ID
         long orderId = IdWorker.getId();
+        // 计算订单总金额
         AtomicInteger amount = new AtomicInteger(0);
-        //向订单细节表设置属性
-        List<OrderDetail> orderDetailList= shoppingCarts.stream().map((item) -> {
+        // 根据购物车数据设置订单细节表属性
+        List<OrderDetail> orderDetailList = shoppingCarts.stream().map((item) -> {
             OrderDetail orderDetail = new OrderDetail();
             orderDetail.setOrderId(orderId);
             orderDetail.setName(item.getName());
@@ -72,7 +87,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             return orderDetail;
         }).collect(Collectors.toList());
 
-        //向订单表设置属性
+        // 设置订单表属性
         orders.setId(orderId);
         orders.setNumber(String.valueOf(orderId));
         orders.setStatus(2);
@@ -84,6 +99,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         orders.setPhone(addressBook.getPhone());
         orders.setUserName(user.getName());
         orders.setConsignee(addressBook.getConsignee());
+        // 设置订单地址信息
         orders.setAddress(
                 (addressBook.getProvinceName() == null ? "":addressBook.getProvinceName())+
                         (addressBook.getCityName() == null ? "":addressBook.getCityName())+
@@ -91,12 +107,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                         (addressBook.getDetail() == null ? "":addressBook.getDetail())
         );
 
-        //根据查询到的购物车数据，对订单表插入数据（1条）
+        // 向订单表插入数据
         super.save(orders);
-        //根据查询到的购物车数据，对订单明细表插入数据（多条）
+        // 向订单明细表插入数据
         orderDetailService.saveBatch(orderDetailList);
-        //清空购物车数据
+        // 清空购物车数据
         shoppingCartService.remove(shoppingCartLambdaQueryWrapper);
-
     }
 }
