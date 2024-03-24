@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.mail.MessagingException;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.util.Map;
 
@@ -83,5 +84,18 @@ public class UserController {
         }
 
         return R.error("验证码错误,登录失败！");
+    }
+
+    /**
+     * 处理用户登出请求的函数。
+     *
+     * @param request HttpServletRequest对象，用于获取会话并移除用户属性。
+     * @return R<String> 返回一个表示操作结果的对象，其中包含退出成功的消息。
+     */
+    @PostMapping("/loginout")
+    public R<String> logout(HttpServletRequest request) {
+        // 从会话中移除用户属性，实现登出逻辑
+        request.getSession().removeAttribute("user");
+        return R.success("退出成功");
     }
 }
