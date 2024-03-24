@@ -157,7 +157,7 @@ public class DishController {
      * @return 返回查询到的菜品列表的结果，成功返回包含列表的Result对象
      */
     @GetMapping("/list")
-    public R<List<Dish>> get(Dish dish) {
+    public R<List<DishDto>> get(Dish dish) {
         // 创建条件查询器
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
         // 根据传进来的categoryId查询，如果categoryId不为空
@@ -168,7 +168,36 @@ public class DishController {
         queryWrapper.orderByAsc(Dish::getSort).orderByDesc(Dish::getUpdateTime);
         // 执行查询并获取结果
         List<Dish> list = dishService.list(queryWrapper);
+
+
+        List<DishDto> dishDtoList = list.stream().map((item) -> {
+            //创建一个dishDto对象
+            DishDto dishDto = new DishDto();
+            //将item的属性全都copy到dishDto里
+            BeanUtils.copyProperties(item, dishDto);
+            //由于dish表中没有categoryName属性，只存了categoryId
+            Long categoryId = item.getCategoryId();
+            //所以我们要根据categoryId查询对应的category
+            Category category = categoryService.getById(categoryId);
+            if (category != null) {
+                //然后取出categoryName，赋值给dishDto
+                dishDto.setCategoryName(category.getName());
+            }
+            //然后获取一下菜品id，根据菜品id去dishFlavor表中查询对应的口味，并赋值给dishDto
+            Long itemId = item.getId();
+            //条件构造器
+            LambdaQueryWrapper<DishFlavor> lambdaQueryWrapper = new LambdaQueryWrapper<>();
+            //条件就是菜品id
+            lambdaQueryWrapper.eq(itemId != null, DishFlavor::getDishId, itemId);
+            //根据菜品id，查询到菜品口味
+            List<DishFlavor> flavors = dishFlavorService.list(lambdaQueryWrapper);
+            //赋给dishDto的对应属性
+            dishDto.setFlavors(flavors);
+            //并将dishDto作为结果返回
+            return dishDto;
+            //将所有返回结果收集起来，封装成List
+        }).collect(Collectors.toList());
         // 将查询结果封装成成功结果并返回
-        return R.success(list);
+        return R.success(dishDtoList);
     }
 }
