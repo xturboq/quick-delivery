@@ -3,6 +3,7 @@ package com.zecola.cleme.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.zecola.cleme.common.BaseContext;
+import com.zecola.cleme.common.CustomException;
 import com.zecola.cleme.common.R;
 import com.zecola.cleme.pojo.AddressBook;
 import com.zecola.cleme.service.AddressBookService;
@@ -104,4 +105,66 @@ public class AddressBookController {
         // 返回查询结果，如果存在则包含在成功的响应对象中，否则为空响应对象
         return R.success(addressBook);
     }
+
+    /**
+     * 根据ID获取地址薄信息。
+     *
+     * @param id 地址薄的唯一标识符。
+     * @return 返回一个包含地址薄信息的响应对象。如果地址薄不存在，则抛出自定义异常。
+     */
+    @GetMapping("/{id}")
+    public R<AddressBook> getById(@PathVariable Long id) {
+        // 通过ID从地址薄服务中获取地址信息
+        AddressBook addressBook = addressBookService.getById(id);
+        // 如果地址信息不存在，则抛出定制异常
+        if (addressBook == null){
+            throw new CustomException("地址信息不存在");
+        }
+        // 返回成功的响应，包含地址薄信息
+        return R.success(addressBook);
+    }
+
+    /**
+     * 更新地址信息
+     *
+     * @param addressBook 用户提交的地址信息对象，通过RequestBody接收前端传来的JSON数据
+     * @return 返回操作结果，如果成功更新地址信息，则返回成功消息；如果地址信息为空，则抛出自定义异常
+     */
+    @PutMapping
+    public R<String> updateAdd(@RequestBody AddressBook addressBook) {
+        // 检查传入的地址信息是否为空
+        if (addressBook == null) {
+            throw new CustomException("地址信息不存在，请刷新重试");
+        }
+        // 调用服务层方法，根据传入的地址信息更新数据库中的记录
+        addressBookService.updateById(addressBook);
+        // 返回成功响应，通知前端地址修改成功
+        return R.success("地址修改成功");
+    }
+
+
+    /**
+     * 删除地址信息
+     *
+     * @param id 地址信息的ID，必须为Long类型，不能为空
+     * @return R<String> 返回操作结果，成功则返回成功消息，失败则抛出异常
+     */
+    @DeleteMapping
+    public R<String> deleteAdd(@RequestParam("ids") Long id) {
+        // 检查ID是否为空
+        if (id == null) {
+            throw new CustomException("地址信息不存在，请刷新重试");
+        }
+        // 根据ID查询地址信息，确认该地址存在
+        AddressBook addressBook = addressBookService.getById(id);
+        if (addressBook == null) {
+            throw new CustomException("地址信息不存在，请刷新重试");
+        }
+        // 删除地址信息
+        addressBookService.removeById(id);
+        // 返回删除成功的消息
+        return R.success("地址删除成功");
+    }
+
+
 }
